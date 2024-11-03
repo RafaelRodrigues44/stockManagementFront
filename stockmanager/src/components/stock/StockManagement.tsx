@@ -5,19 +5,23 @@ import Modal from 'react-modal';
 import './StockManagement.css';
 
 interface StockEntry {
-  productId: number;
-  quantity: number;
-  price: number;
+  productId: number | null;
+  quantity: number | null;
+  price: number | null;
   batch: string;
   imageUrl?: string; 
+  createdAt?: string; 
+  updatedAt?: string;
 }
 
 interface StockExit {
-  productId: number;
-  quantity: number;
-  price: number;
+  productId: number | null;
+  quantity: number | null;
+  price: number | null;
   batch: string;
-  imageUrl?: string; 
+  imageUrl?: string;
+  createdAt?: string; 
+  updatedAt?: string; 
 }
 
 interface TotalStock {
@@ -32,13 +36,20 @@ interface Product {
   image?: string;
 }
 
+interface InventoryItem {
+  id: number;
+  name: string;
+  quantityInStock: number;
+  totalValueInStock: string; 
+}
+
 const StockManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('entries');
   const [entries, setEntries] = useState<StockEntry[]>([]);
   const [exits, setExits] = useState<StockExit[]>([]);
   const [totalStock, setTotalStock] = useState<TotalStock | null>(null);
-  const [newEntry, setNewEntry] = useState<StockEntry>({ productId: 0, quantity: 0, price: 0, batch: '' });
-  const [newExit, setNewExit] = useState<StockExit>({ productId: 0, quantity: 0, price: 0, batch: '' });
+  const [newEntry, setNewEntry] = useState<StockEntry>({ productId: null, quantity: null, price: null, batch: '' });
+  const [newExit, setNewExit] = useState<StockExit>({ productId: null, quantity: null, price: null, batch: '' });
   const [newProduct, setNewProduct] = useState<{ name: string; description: string; manufacturer: string; image?: string }>({
     name: '',
     description: '',
@@ -55,6 +66,7 @@ const StockManagement: React.FC = () => {
     fetchExits();
     fetchTotalStock();
     fetchProducts();
+    fetchInventoryData();
   }, []);
 
   const fetchEntries = async () => {
@@ -123,7 +135,7 @@ const StockManagement: React.FC = () => {
       });
       fetchEntries();
       fetchTotalStock();
-      setNewEntry({ productId: 0, quantity: 0, price: 0, batch: '' });
+      setNewEntry({ productId: null, quantity: null, price: null, batch: '' });
       setErrorMessage(null);
       setSuccessMessage("Entrada criada com sucesso!"); 
       setTimeout(() => setSuccessMessage(null), 5000); 
@@ -144,7 +156,7 @@ const StockManagement: React.FC = () => {
       });
       fetchExits();
       fetchTotalStock();
-      setNewExit({ productId: 0, quantity: 0, price: 0, batch: '' });
+      setNewExit({ productId: null, quantity: null, price: null, batch: '' });
       setErrorMessage(null);
       setSuccessMessage("Saída criada com sucesso!"); 
       setTimeout(() => setSuccessMessage(null), 5000);
@@ -248,12 +260,28 @@ const StockManagement: React.FC = () => {
     setSelectedProduct(null);
   };
 
+  const [inventoryData, setInventoryData] = useState<InventoryItem[]>([]);
+
+  const fetchInventoryData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:4000/api/stock/inventory', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setInventoryData(response.data); 
+    } catch (error) {
+      console.error("Error fetching inventory data:", error);
+    }
+  };
+
   return (
     <div className="container stock-management-container">
       <h2 className="stock-management-title">Gerenciamento de Estoque</h2>
       <div className="tab-menu">
-        <button className={`tab-button ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>Entradas</button>
-        <button className={`tab-button ${activeTab === 'exits' ? 'active' : ''}`} onClick={() => setActiveTab('exits')}>Saídas</button>
+        <button className={`tab-button ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>Cadastrar Entrada</button>
+        <button className={`tab-button ${activeTab === 'exits' ? 'active' : ''}`} onClick={() => setActiveTab('exits')}>Gerar Saída</button>
         <button className={`tab-button ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>Inventário</button>
         <button className={`tab-button ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>Cadastrar Produtos</button>
         <button className={`tab-button ${activeTab === 'list-products' ? 'active' : ''}`} onClick={() => setActiveTab('list-products')}>Listar Produtos</button>
@@ -265,31 +293,32 @@ const StockManagement: React.FC = () => {
           <label>Id do Produto</label>
           <input
             type="number"
-            placeholder="Product ID"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newEntry.productId}
-            onChange={e => setNewEntry({ ...newEntry, productId: Number(e.target.value) })}
+            value={newEntry.productId !== null ? newEntry.productId : ''}
+            onChange={e => setNewEntry({ ...newEntry, productId: e.target.value === '' ? null : Number(e.target.value) })}
+
           />
           <label>Quantidade</label>
           <input
             type="number"
-            placeholder="Quantity"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newEntry.quantity}
-            onChange={e => setNewEntry({ ...newEntry, quantity: Number(e.target.value) })}
+            value={newEntry.quantity !== null ? newEntry.quantity : ''}
+            onChange={e => setNewEntry({ ...newEntry, quantity: e.target.value === '' ? null : Number(e.target.value) })}
           />
           <label>Preço de Compra</label>
           <input
             type="number"
-            placeholder="Price"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newEntry.price}
+            value={newEntry.price !== null ? newEntry.price : ''}
             onChange={e => setNewEntry({ ...newEntry, price: Number(e.target.value) })}
           />
           <label>Lote</label>
           <input
             type="text"
-            placeholder="Lote"
+            placeholder="Digite"
             className="form-control stock-management-input"
             value={newEntry.batch}
             onChange={e => setNewEntry({ ...newEntry, batch: e.target.value })}
@@ -297,15 +326,32 @@ const StockManagement: React.FC = () => {
           <button className="btn btn-primary stock-management-button" onClick={handleCreateEntry}>Confirmar</button>
           {errorMessage && <div className="error-message">{errorMessage}</div>}
           {successMessage && <div className="success-message">{successMessage}</div>}
+          
           <h3>Entradas no estoque</h3>
-          <ul className="stock-management-list">
-            {entries.map(entry => (
-              <li key={entry.productId} className="stock-management-list-item">
-                Produto ID: {entry.productId}, Quantidade: {entry.quantity}, Preço: {entry.price}, Lote: {entry.batch}
-                {entry.imageUrl && <img src={entry.imageUrl} alt="Entry" className="image-thumbnail" />}
-              </li>
-            ))}
-          </ul>
+          <table className="product-table">
+            <thead>
+              <tr>
+                <th>Data de Entrada</th>
+                <th>Última atualização</th>
+                <th>ID do Produto</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Lote</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.map(entry => (
+                <tr key={entry.productId}>
+                  <td>{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : 'N/A'}</td>
+                  <td>{entry.updatedAt ? new Date(entry.updatedAt).toLocaleString() : 'N/A'}</td>
+                  <td>{entry.productId}</td>
+                  <td>{entry.quantity}</td>
+                  <td>{entry.price}</td>
+                  <td>{entry.batch}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -315,31 +361,31 @@ const StockManagement: React.FC = () => {
           <label>Id do Produto</label>
           <input
             type="number"
-            placeholder="Product ID"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newExit.productId}
-            onChange={e => setNewExit({ ...newExit, productId: Number(e.target.value) })}
+            value={newExit.productId !== null ? newExit.productId : ''}
+            onChange={e => setNewExit({ ...newExit, productId: e.target.value === '' ? null : Number(e.target.value) })}
           />
           <label>Quantidade</label>
           <input
             type="number"
-            placeholder="Quantity"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newExit.quantity}
-            onChange={e => setNewExit({ ...newExit, quantity: Number(e.target.value) })}
+            value={newExit.quantity !== null ? newExit.quantity : ''}
+            onChange={e => setNewExit({ ...newExit, quantity: e.target.value === '' ? null : Number(e.target.value) })}
           />
           <label>Preço</label>
           <input
             type="number"
-            placeholder="Price"
+            placeholder="0"
             className="form-control stock-management-input"
-            value={newExit.price}
-            onChange={e => setNewExit({ ...newExit, price: Number(e.target.value) })}
+            value={newExit.price !== null ? newExit.price : ''}
+            onChange={e => setNewExit({ ...newExit, price: e.target.value === '' ? null : Number(e.target.value) })}
           />
           <label>Lote</label>
           <input
             type="text"
-            placeholder="Lote"
+            placeholder="Digite"
             className="form-control stock-management-input"
             value={newExit.batch}
             onChange={e => setNewExit({ ...newExit, batch: e.target.value })}
@@ -347,22 +393,58 @@ const StockManagement: React.FC = () => {
           <button className="btn btn-primary stock-management-button" onClick={handleCreateExit}>Confirmar</button>
           {errorMessage && <div className="error-message">{errorMessage}</div>}
           {successMessage && <div className="success-message">{successMessage}</div>}
+          
           <h3>Saídas do estoque</h3>
-          <ul className="stock-management-list">
-            {exits.map(exit => (
-              <li key={exit.productId} className="stock-management-list-item">
-                Produto ID: {exit.productId}, Quantidade: {exit.quantity}, Preço: {exit.price}, Lote: {exit.batch}
-                {exit.imageUrl && <img src={exit.imageUrl} alt="Exit" className="image-thumbnail" />}
-              </li>
-            ))}
-          </ul>
+          <table className="product-table">
+            <thead>
+              <tr>
+                <th>Data de Saída</th>
+                <th>Última atualização</th>
+                <th>ID do Produto</th>
+                <th>Quantidade</th>
+                <th>Preço</th>
+                <th>Lote</th>
+              </tr>
+            </thead>
+            <tbody>
+              {exits.map(exit => (
+                <tr key={exit.productId}>
+                  <td>{exit.createdAt ? new Date(exit.createdAt).toLocaleString() : 'N/A'}</td>
+                  <td>{exit.updatedAt ? new Date(exit.updatedAt).toLocaleString() : 'N/A'}</td>
+                  <td>{exit.productId}</td>
+                  <td>{exit.quantity}</td>
+                  <td>{exit.price}</td>
+                  <td>{exit.batch}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {activeTab === 'inventory' && totalStock && (
+      {activeTab === 'inventory' && (
         <div className="tab-content">
-          <h3>Total de Estoque</h3>
-          <p>Quantidade Total: {totalStock.totalStockQuantity}</p>
+          <h3>Inventário</h3>
+          <table className="product-table"> 
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Quantidade em Estoque</th>
+                <th>Valor Total em Estoque</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryData.map(product => (
+                <tr key={product.id}>
+                  <td>{product.id}</td>
+                  <td>{product.name}</td>
+                  <td>{product.quantityInStock}</td>
+                  <td>{product.totalValueInStock}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -397,46 +479,53 @@ const StockManagement: React.FC = () => {
         </div>
       )}
 
-      <Modal isOpen={modalIsOpen} onRequestClose={closeModal}>
-        <div className="modal-content">
-          <h2 className="modal-title">Editar Produto</h2>
-          <label>Nome</label>
-          <input
-            type="text"
-            placeholder="Nome"
-            className="form-control stock-management-input"
-            value={selectedProduct?.name || ''}
-            onChange={e => setSelectedProduct({ ...selectedProduct!, name: e.target.value })}
-          />
-          <label>Descrição</label>
-          <input
-            type="text"
-            placeholder="Descrição"
-            className="form-control stock-management-input"
-            value={selectedProduct?.description || ''}
-            onChange={e => setSelectedProduct({ ...selectedProduct!, description: e.target.value })}
-          />
-          <label>Fabricante</label>
-          <input
-            type="text"
-            placeholder="Fabricante"
-            className="form-control stock-management-input"
-            value={selectedProduct?.manufacturer || ''}
-            onChange={e => setSelectedProduct({ ...selectedProduct!, manufacturer: e.target.value })}
-          />
-          <button className="modal-button" onClick={handleUpdateProduct}>Salvar</button>
-          <button className="modal-button" onClick={closeModal}>Cancelar</button>
-        </div>
-      </Modal>
+<Modal isOpen={modalIsOpen} onRequestClose={closeModal} className="modal">
+  <div className="modal-content">
+    <h2 className="modal-title">Editar Produto</h2>
+    
+    <label className="modal-label">Nome</label>
+    <input
+      type="text"
+      placeholder="Nome"
+      className="modal-input"
+      value={selectedProduct?.name || ''}
+      onChange={e => setSelectedProduct({ ...selectedProduct!, name: e.target.value })}
+    />
+    
+    <label className='modal-label'>Descrição</label>
+    <input
+      type="text"
+      placeholder="Descrição"
+      className="modal-input"
+      value={selectedProduct?.description || ''}
+      onChange={e => setSelectedProduct({ ...selectedProduct!, description: e.target.value })}
+    />
+    
+    <label className='modal-label'>Fabricante</label>
+    <input
+      type="text"
+      placeholder="Fabricante"
+      className="modal-input"
+      value={selectedProduct?.manufacturer || ''}
+      onChange={e => setSelectedProduct({ ...selectedProduct!, manufacturer: e.target.value })}
+    />
+    
+    <div className="modal-actions">
+      <button className="modal-button" onClick={handleUpdateProduct}>Salvar</button>
+      <button className="modal-button cancel" onClick={closeModal}>Cancelar</button>
+    </div>
+  </div>
+</Modal>
+
 
       {activeTab === 'products' && (
         <div className="tab-content">
           <h3>Criar novo produto</h3>
-          <label>Nome</label>
+          <label className='modal-label'>Nome</label>
           <input
             type="text"
             placeholder="Nome"
-            className="form-control stock-management-input"
+            className="modal-input"
             value={newProduct.name}
             onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
           />
@@ -444,15 +533,15 @@ const StockManagement: React.FC = () => {
           <input
             type="text"
             placeholder="Descrição"
-            className="form-control stock-management-input"
+            className="modal-input"
             value={newProduct.description}
             onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
           />
-          <label>Fabricante</label>
+          <label className='modal-label'>Fabricante</label>
           <input
             type="text"
             placeholder="Fabricante"
-            className="form-control stock-management-input"
+            className="modal-input"
             value={newProduct.manufacturer}
             onChange={e => setNewProduct({ ...newProduct, manufacturer: e.target.value })}
           />
