@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useDropzone } from 'react-dropzone';
+import Modal from 'react-modal'; 
 import './StockManagement.css';
 
 interface StockEntry {
@@ -23,6 +24,14 @@ interface TotalStock {
   totalStockQuantity: number;
 }
 
+interface Product {
+  id: number;
+  name: string;
+  description: string;
+  manufacturer: string;
+  image?: string;
+}
+
 const StockManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('entries');
   const [entries, setEntries] = useState<StockEntry[]>([]);
@@ -35,13 +44,17 @@ const StockManagement: React.FC = () => {
     description: '',
     manufacturer: '',
   });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [modalIsOpen, setModalIsOpen] = useState<boolean>(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); 
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchEntries();
     fetchExits();
     fetchTotalStock();
+    fetchProducts();
   }, []);
 
   const fetchEntries = async () => {
@@ -83,6 +96,20 @@ const StockManagement: React.FC = () => {
       setTotalStock(response.data);
     } catch (error) {
       console.error("Error fetching total stock:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/products', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setProducts(response.data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
     }
   };
 
@@ -147,6 +174,7 @@ const StockManagement: React.FC = () => {
       setErrorMessage(null);
       setSuccessMessage("Produto criado com sucesso!"); 
       setTimeout(() => setSuccessMessage(null), 5000);
+      fetchProducts(); 
     } catch (error) {
       let errorMessage = "Erro ao criar produto.";
   
@@ -157,6 +185,43 @@ const StockManagement: React.FC = () => {
       setErrorMessage(errorMessage);
       setSuccessMessage(null); 
       console.error("Error creating product:", error);
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (selectedProduct) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.put(`http://localhost:5000/api/products/${selectedProduct.id}`, selectedProduct, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        fetchProducts();
+        closeModal();
+        setSuccessMessage("Produto atualizado com sucesso!");
+        setTimeout(() => setSuccessMessage(null), 5000);
+      } catch (error) {
+        setErrorMessage("Erro ao atualizar produto.");
+        console.error("Error updating product:", error);
+      }
+    }
+  };
+
+  const handleDeleteProduct = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`http://localhost:5000/api/products/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      fetchProducts();
+      setSuccessMessage("Produto deletado com sucesso!");
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (error) {
+      setErrorMessage("Erro ao deletar produto.");
+      console.error("Error deleting product:", error);
     }
   };
 
@@ -173,6 +238,16 @@ const StockManagement: React.FC = () => {
     onDrop: onDropProductImage,
   });
 
+  const openModal = (product: Product) => {
+    setSelectedProduct(product);
+    setModalIsOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalIsOpen(false);
+    setSelectedProduct(null);
+  };
+
   return (
     <div className="container stock-management-container">
       <h2 className="stock-management-title">Gerenciamento de Estoque</h2>
@@ -180,7 +255,8 @@ const StockManagement: React.FC = () => {
         <button className={`tab-button ${activeTab === 'entries' ? 'active' : ''}`} onClick={() => setActiveTab('entries')}>Entradas</button>
         <button className={`tab-button ${activeTab === 'exits' ? 'active' : ''}`} onClick={() => setActiveTab('exits')}>Saídas</button>
         <button className={`tab-button ${activeTab === 'inventory' ? 'active' : ''}`} onClick={() => setActiveTab('inventory')}>Inventário</button>
-        <button className={`tab-button ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>Produtos</button>
+        <button className={`tab-button ${activeTab === 'products' ? 'active' : ''}`} onClick={() => setActiveTab('products')}>Cadastrar Produtos</button>
+        <button className={`tab-button ${activeTab === 'list-products' ? 'active' : ''}`} onClick={() => setActiveTab('list-products')}>Listar Produtos</button>
       </div>
 
       {activeTab === 'entries' && (
@@ -290,6 +366,69 @@ const StockManagement: React.FC = () => {
         </div>
       )}
 
+      {activeTab === 'list-products' && (
+        <div className="tab-content">
+          <h3>Lista de Produtos</h3>
+          <table className="product-table">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Descrição</th>
+                <th>Fabricante</th>
+                <th>Imagem</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              {products.map(product => (
+                <tr key={product.id}>
+                  <td>{product.name}</td>
+                  <td>{product.description}</td>
+                  <td>{product.manufacturer}</td>
+                  <td>{product.image && <img src={product.image} alt={product.name} className="image-thumbnail" />}</td>
+                  <td>
+                    <button className="product-button" onClick={() => openModal(product)}>Editar</button>
+                    <button className="product-button" onClick={() => handleDeleteProduct(product.id)}>Deletar</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal isOpen={modalIsOpen} onRequestClose={closeModal}>
+        <div className="modal-content">
+          <h2 className="modal-title">Editar Produto</h2>
+          <label>Nome</label>
+          <input
+            type="text"
+            placeholder="Nome"
+            className="form-control stock-management-input"
+            value={selectedProduct?.name || ''}
+            onChange={e => setSelectedProduct({ ...selectedProduct!, name: e.target.value })}
+          />
+          <label>Descrição</label>
+          <input
+            type="text"
+            placeholder="Descrição"
+            className="form-control stock-management-input"
+            value={selectedProduct?.description || ''}
+            onChange={e => setSelectedProduct({ ...selectedProduct!, description: e.target.value })}
+          />
+          <label>Fabricante</label>
+          <input
+            type="text"
+            placeholder="Fabricante"
+            className="form-control stock-management-input"
+            value={selectedProduct?.manufacturer || ''}
+            onChange={e => setSelectedProduct({ ...selectedProduct!, manufacturer: e.target.value })}
+          />
+          <button className="modal-button" onClick={handleUpdateProduct}>Salvar</button>
+          <button className="modal-button" onClick={closeModal}>Cancelar</button>
+        </div>
+      </Modal>
+
       {activeTab === 'products' && (
         <div className="tab-content">
           <h3>Criar novo produto</h3>
@@ -330,5 +469,5 @@ const StockManagement: React.FC = () => {
     </div>
   );
 };
-
+    
 export default StockManagement;
