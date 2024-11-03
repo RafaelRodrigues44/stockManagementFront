@@ -1,4 +1,4 @@
-# Frontend de Cadastro de Usuário e Gestão de Estoque
+# Frontend de Gestão de Estoque
 
 Este é o frontend de uma aplicação de cadastro de usuário e gestão de estoque construída com React. Ele possui funcionalidades de registro de usuário, login e rotas protegidas para acesso a recursos de gestão de estoque.
 
