@@ -25,7 +25,7 @@ const UserRegistration: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const response = await axios.post('http://localhost:4000/api/user', formData);
+      const response = await axios.post('http://localhost:4000/api/users/user', formData);
       setMessage(`Cadastro criado com sucesso!`);
       setFormData({ name: '', email: '', password: '' });
 
